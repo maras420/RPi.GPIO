@@ -31,14 +31,8 @@ SOFTWARE.
 #include <arpa/inet.h>
 #include "cpuinfo.h"
 
-#ifndef BPI
-#define BPI
-#endif
-
-#ifdef BPI
 extern int bpi_found;
 extern int bpi_get_rpi_info();
-#endif
 
 int get_rpi_info(rpi_info *info)
 {
@@ -49,13 +43,11 @@ int get_rpi_info(rpi_info *info)
    int found = 0;
    int len;
 
-#ifdef BPI
    if (bpi_found != 0) {
      bpi_get_rpi_info(info);
      if (bpi_found == 1)
        return 0;
    }
-#endif
 
    if ((fp = fopen("/proc/device-tree/system/linux,revision", "r"))) {
       uint32_t n;

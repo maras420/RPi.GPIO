@@ -111,6 +111,9 @@ static volatile uint32_t *r_pio_map;
 int bpi_found=-1;
 int bpi_found_mtk = 0;
 
+#define BPI_MODEL_MIN   21
+#define	BPI_MODEL_M2Z 	33
+
 int *pinToGpio_BP ;
 int *physToGpio_BP ;
 int *pinTobcm_BP ;
@@ -136,7 +139,6 @@ char *piModelNames [64] =
   "Unknown13",	// 13
   "Unknown14",	// 14
   "Unknown15",	// 15
-#ifdef BPI
   "Banana Pi[New]",	// 16
   "Banana Pi[X86]",	// 17
   "Raspbery Pi[RPI]",	// 18
@@ -154,10 +156,9 @@ char *piModelNames [64] =
   "Banana Pi M2+[H2+]",	// 30
   "Banana Pi M2+[H5]",	// 31
   "Banana Pi M2 Ultra[V40]",	// 32
-  "Banana Pi M2 Zero[H2+/H3]",	// 33
+  "Banana Pi M2 Zero[H2+]",	// 33
   "Banana Pi R2[MT7623]", //34
   NULL,
-#endif
 } ;
 
 char *piRevisionNames [16] =
@@ -187,11 +188,7 @@ char *piMakerNames [16] =
   "Embest",	//	 2
   "Unknown",	//	 3
   "Embest",	//	 4
-#ifdef BPI
   "BPI-Sinovoip",	//	 5
-#else
-  "Unknown05",	//	 5
-#endif
   "Unknown06",	//	 6
   "Unknown07",	//	 7
   "Unknown08",	//	 8
@@ -209,16 +206,19 @@ int piMemorySize [8] =
    256,		//	 0
    512,		//	 1
   1024,		//	 2
-#ifdef BPI
   2048,		//	 3
-#else
-     0,		//	 3
-#endif
+  4096,		//	 3
      0,		//	 4
      0,		//	 5
      0,		//	 6
      0,		//	 7
 } ;
+
+typedef struct 
+{
+	char deviceTreeModel[255];
+	int boardModel;
+} BoardHardwareDeviceTreeInfo;
 
 struct BPIBoards
 {
@@ -274,12 +274,14 @@ struct BPIBoards bpiboard [] =
   { "bpi-m2p_H2+", 10701, 30, 1, 2, 5, 0, pinToGpio_BPI_M2P, physToGpio_BPI_M2P, pinTobcm_BPI_M2P 	},
   { "bpi-m2p_H5",  10801, 31, 1, 2, 5, 0, pinToGpio_BPI_M2P, physToGpio_BPI_M2P, pinTobcm_BPI_M2P 	},
   { "bpi-m2u_V40", 10901, 32, 1, 3, 5, 0, pinToGpio_BPI_M2U, physToGpio_BPI_M2U, pinTobcm_BPI_M2U 	},
-  { "bpi-m2z",	   11001, 33, 1, 1, 5, 0, pinToGpio_BPI_M2P, physToGpio_BPI_M2P, pinTobcm_BPI_M2P 	},
+  { "bpi-m2z",	   11001, BPI_MODEL_M2Z, 1, 1, 5, 0, pinToGpio_BPI_M2P, physToGpio_BPI_M2P, pinTobcm_BPI_M2P 	},
   { "bpi-r2",      11101, 34, 1, 3, 5, 0, pinToGpio_BPI_R2,  physToGpio_BPI_R2,  pinTobcm_BPI_R2    },
   { NULL,		0, 0, 1, 2, 5, 0, NULL, NULL, NULL 	},
 } ;
 
-
+BoardHardwareDeviceTreeInfo gAllBoardHardwareDeviceTreeInfo[] = {
+	{"Banana Pi M2 Zero", BPI_MODEL_M2Z }, 
+};
 
 static uint8_t* gpio_mmap_reg = NULL;
 
@@ -534,6 +536,30 @@ int sunxi_input_gpio(int gpio)
     return regval;
 }
 
+
+
+int getBoardModelbyDeviceTreeModel()
+{
+	FILE *f;
+	size_t i;
+	int ret = -1;
+	char line[1024];
+
+	if (!(f = fopen("/proc/device-tree/model", "r"))) {
+		return -1;
+	}
+	if (fgets(line, sizeof(line), f)) {
+		for (i=0; i<(sizeof(gAllBoardHardwareDeviceTreeInfo)/sizeof(BoardHardwareDeviceTreeInfo)); i++) {
+			if (!strcmp(gAllBoardHardwareDeviceTreeInfo[i].deviceTreeModel, line)) {
+				ret = gAllBoardHardwareDeviceTreeInfo[i].boardModel;
+				break;
+			}
+		}
+	}
+	fclose(f);
+	return ret;
+}
+
 int bpi_piGpioLayout (void)
 {
   FILE *bpiFd ;
@@ -544,6 +570,18 @@ int bpi_piGpioLayout (void)
 
   if (gpioLayout != -1)	// No point checking twice
     return gpioLayout ;
+
+  // Check board via device-tree model
+  int boardModel = getBoardModelbyDeviceTreeModel();
+  if (boardModel>=0) {
+    gpioLayout = boardModel;
+    if (gpioLayout >= BPI_MODEL_MIN) {
+      //printf ("Banana Pi found layout %d\n", gpioLayout) ;
+      bpi_found = 1;
+      return gpioLayout;     
+    }
+  }
+
 
   bpi_found = 0; // -1: not init, 0: init but not found, 1: found
   if ((bpiFd = fopen("/var/lib/bananapi/board.sh", "r")) == NULL) {
@@ -560,7 +598,7 @@ int bpi_piGpioLayout (void)
         //gpioLayout = board->gpioLayout;
         gpioLayout = board->model; // BPI: use model to replace gpioLayout
         //printf("BPI: name[%s] gpioLayout(%d)\n",board->name, gpioLayout);
-        if(gpioLayout >= 21) {
+        if(gpioLayout >= BPI_MODEL_MIN) {
           bpi_found = 1;
           break;
         }
@@ -595,7 +633,7 @@ int bpi_get_rpi_info(rpi_info *info)
      //jude mtk platform
     if(strcmp(board->name, "bpi-r2") == 0){
         bpi_found_mtk = 1;
-	printf("found mtk board\n");
+        printf("found mtk board\n");
     }
     sprintf(manufacturer, "%s", piMakerNames [board->maker]);
     info->p1_revision = 3;
@@ -605,7 +643,7 @@ int bpi_get_rpi_info(rpi_info *info)
     if(bpi_found_mtk == 1){
         info->processor = "MTK";
     }else{
-	info->processor = "Allwinner";
+      info->processor = "Allwinner";
     }
     
     strcpy(info->revision, "4001");
