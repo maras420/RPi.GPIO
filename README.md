@@ -7,7 +7,7 @@ Brunch merge-7.0 is a combination of original [SourceForge v0.7.0](https://sourc
 The binary (tools and library) will support both worlds Raspberry Pi and Banana Pi M2 Zero.
 Original SourceForge v0.7.0. is available at sf-7.0 brunch.
 
-We provide no support! Please contact base repository maintainers if you you problems.
+We provide no support! Please contact base repository maintainers if you have problems.
 
 ## Functions missing
 
