@@ -440,6 +440,12 @@ void sunxi_set_pullupdn(int gpio, int pud)
       pio = &((sunxi_gpio_reg_t *) r_pio_map)->gpio_bank[bank];
     }
 
+     switch(pud) {
+      case PUD_DOWN: pud=0x2; break;
+      case PUD_UP:   pud=0x1; break;
+      default:       pud=0x0; break;
+    }
+
     regval = *(&pio->PULL[0] + index);
     regval &= ~(3 << offset);
     regval |= pud << offset;
