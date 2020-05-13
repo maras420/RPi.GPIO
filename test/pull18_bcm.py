@@ -4,20 +4,20 @@ import time
 
 
 led = 18
-stime = 0.5
+stime = 2
 
 GPIO.setmode(GPIO.BCM)
 
 print("GPIO.setup led ")
 GPIO.setup(led, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
+print('led on')
 
 while True:
     if GPIO.input(led):
-      print('led on')
       GPIO.setup(led, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    else:
       print('led off')
+    else:
       GPIO.setup(led, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+      print('led on')
     time.sleep(stime)
 

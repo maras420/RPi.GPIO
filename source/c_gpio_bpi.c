@@ -401,7 +401,7 @@ int sunxi_setup(void)
     char buffer[1024];
     char hardware[1024];
     int found = 0;
-	printf("enter to sunxi_setup\n");
+    printf("enter to sunxi_setup\n");
 
     // mmap the GPIO memory registers
     if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0)
@@ -433,28 +433,37 @@ void sunxi_set_pullupdn(int gpio, int pud)
     int bank = GPIO_BANK(gpio); //gpio >> 5
     int index = GPIO_PUL_INDEX(gpio); // (gpio & 0x1f) >> 4
     int offset = GPIO_PUL_OFFSET(gpio); // (gpio) & 0x0F) << 1
-	printf("sunxi_set_pullupdn\n");
+    printf("sunxi_set_pullupdn %d %d\n", gpio, pud);
+    printf("gpio(%d) bank(%d) index(%d) offset(%d)\n", gpio, bank, index, offset);
 
     sunxi_gpio_t *pio = &((sunxi_gpio_reg_t *) pio_map)->gpio_bank[bank];
 /* DK, for PL and PM */
     if(bank >= 11) {
       bank -= 11;
       pio = &((sunxi_gpio_reg_t *) r_pio_map)->gpio_bank[bank];
+    }
+
+    switch(pud) {
+      case PUD_DOWN: pud=0x2; break;
+      case PUD_UP:   pud=0x1; break;
+      default:       pud=0x0; break;
     }
 
     regval = *(&pio->PULL[0] + index);
     regval &= ~(3 << offset);
     regval |= pud << offset;
     *(&pio->PULL[0] + index) = regval;
+    regval = *(&pio->PULL[0] + index);
 }
 
-void sunxi_setup_gpio(int gpio, int direction, int pud)
+void sunxi_setup_gpio(const int gpio, const int direction,const int pud)
 {
     uint32_t regval = 0;
     int bank = GPIO_BANK(gpio); //gpio >> 5
     int index = GPIO_CFG_INDEX(gpio); // (gpio & 0x1F) >> 3
     int offset = GPIO_CFG_OFFSET(gpio); // ((gpio & 0x1F) & 0x7) << 2
-    printf("sunxi_setup_gpio\n");
+    printf("sunxi_setup_gpio %d %d %d\n", gpio, direction, pud);
+    printf("gpio(%d) bank(%d) index(%d) offset(%d)\n", gpio, bank, index, offset);
     sunxi_gpio_t *pio = &((sunxi_gpio_reg_t *) pio_map)->gpio_bank[bank];
 /* DK, for PL and PM */
     if(bank >= 11) {
@@ -462,7 +471,7 @@ void sunxi_setup_gpio(int gpio, int direction, int pud)
       pio = &((sunxi_gpio_reg_t *) r_pio_map)->gpio_bank[bank];
     }
 
-    set_pullupdn(gpio, pud);
+    sunxi_set_pullupdn(gpio, pud);
 
     regval = *(&pio->CFG[0] + index);
     regval &= ~(0x7 << offset); // 0xf?
@@ -502,7 +511,7 @@ void sunxi_output_gpio(int gpio, int value)
     int bank = GPIO_BANK(gpio); //gpio >> 5
     int num = GPIO_NUM(gpio); // gpio & 0x1F
 
- printf("gpio(%d) bank(%d) num(%d)\n", gpio, bank, num);
+    printf("gpio(%d) bank(%d) num(%d)\n", gpio, bank, num);
     sunxi_gpio_t *pio = &((sunxi_gpio_reg_t *) pio_map)->gpio_bank[bank];
 /* DK, for PL and PM */
     if(bank >= 11) {
