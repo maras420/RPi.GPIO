@@ -56,6 +56,8 @@ static volatile uint32_t *gpio_map;
 extern int bpi_found;
 extern int bpi_found_mtk;
 extern int *pinTobcm_BP ;
+extern int bpi_debug;
+
 
 void short_wait(void)
 {
@@ -329,9 +331,9 @@ void output_gpio(int gpio, int value)
     int offset, shift;
 
     if ( bpi_found == 1)  {
-	    printf("gpio = %d, value = %d\n", gpio, value);
+	    if (bpi_debug>=2) printf("gpio-call = %d\n", gpio);
 	    gpio = *(pinTobcm_BP + gpio);
-	    printf("gpio = %d, value = %d\n", gpio, value);
+	    if (bpi_debug>=2) printf("gpio = %d, value = %d\n", gpio, value);
 	    if(bpi_found_mtk ==  1){
 		    mtk_set_gpio_out(gpio, value);
 	    }else{
