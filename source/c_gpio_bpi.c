@@ -674,7 +674,7 @@ int bpi_get_rpi_info(rpi_info *info)
     pinToGpio_BP =  board->pinToGpio ;
     physToGpio_BP = board->physToGpio ;
     pinTobcm_BP = board->pinTobcm ;
-    if (bpi_debug>=4) printf("BPI: name[%s] bType(%d) model(%d)\n",board->name, bType, board->model);
+    if (bpi_debug>=4) printf("BPI: name[%s] model(%d)\n",board->name, board->model);
     return 0;
   }
   return -1;

@@ -1,10 +1,14 @@
 #!/usr/bin/python3
 import RPi.GPIO as GPIO
 import time
+import os
 
 
 led = 18
 stime = 2
+
+os.environ['RPIGPIO_DEBUG'] = "2"
+print("Debug level set to " + os.environ["RPIGPIO_DEBUG"])
 
 GPIO.setmode(GPIO.BCM)
 
