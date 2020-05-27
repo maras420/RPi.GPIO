@@ -53,7 +53,7 @@ static volatile uint32_t *gpio_map;
 #ifndef BPI
 #define BPI
 #endif
-
+#define	ENV_DEBUG	"RPIGPIO_DEBUG"
 
 #ifdef BPI
 #define SUNXI_R_GPIO_BASE	0x01F02000
@@ -110,6 +110,11 @@ static volatile uint32_t *r_pio_map;
 
 int bpi_found=-1;
 int bpi_found_mtk = 0;
+int bpi_debug = 0;
+
+
+#define BPI_MODEL_MIN   21
+#define	BPI_MODEL_M2Z 	33
 
 int *pinToGpio_BP ;
 int *physToGpio_BP ;
@@ -136,7 +141,6 @@ char *piModelNames [64] =
   "Unknown13",	// 13
   "Unknown14",	// 14
   "Unknown15",	// 15
-#ifdef BPI
   "Banana Pi[New]",	// 16
   "Banana Pi[X86]",	// 17
   "Raspbery Pi[RPI]",	// 18
@@ -154,10 +158,9 @@ char *piModelNames [64] =
   "Banana Pi M2+[H2+]",	// 30
   "Banana Pi M2+[H5]",	// 31
   "Banana Pi M2 Ultra[V40]",	// 32
-  "Banana Pi M2 Zero[H2+/H3]",	// 33
+  "Banana Pi M2 Zero[H2+]",	// 33
   "Banana Pi R2[MT7623]", //34
   NULL,
-#endif
 } ;
 
 char *piRevisionNames [16] =
@@ -187,11 +190,7 @@ char *piMakerNames [16] =
   "Embest",	//	 2
   "Unknown",	//	 3
   "Embest",	//	 4
-#ifdef BPI
   "BPI-Sinovoip",	//	 5
-#else
-  "Unknown05",	//	 5
-#endif
   "Unknown06",	//	 6
   "Unknown07",	//	 7
   "Unknown08",	//	 8
@@ -209,16 +208,19 @@ int piMemorySize [8] =
    256,		//	 0
    512,		//	 1
   1024,		//	 2
-#ifdef BPI
   2048,		//	 3
-#else
-     0,		//	 3
-#endif
+  4096,		//	 3
      0,		//	 4
      0,		//	 5
      0,		//	 6
      0,		//	 7
 } ;
+
+typedef struct 
+{
+	char deviceTreeModel[255];
+	int boardModel;
+} BoardHardwareDeviceTreeInfo;
 
 struct BPIBoards
 {
@@ -274,12 +276,14 @@ struct BPIBoards bpiboard [] =
   { "bpi-m2p_H2+", 10701, 30, 1, 2, 5, 0, pinToGpio_BPI_M2P, physToGpio_BPI_M2P, pinTobcm_BPI_M2P 	},
   { "bpi-m2p_H5",  10801, 31, 1, 2, 5, 0, pinToGpio_BPI_M2P, physToGpio_BPI_M2P, pinTobcm_BPI_M2P 	},
   { "bpi-m2u_V40", 10901, 32, 1, 3, 5, 0, pinToGpio_BPI_M2U, physToGpio_BPI_M2U, pinTobcm_BPI_M2U 	},
-  { "bpi-m2z",	   11001, 33, 1, 1, 5, 0, pinToGpio_BPI_M2P, physToGpio_BPI_M2P, pinTobcm_BPI_M2P 	},
+  { "bpi-m2z",	   11001, BPI_MODEL_M2Z, 1, 1, 5, 0, pinToGpio_BPI_M2P, physToGpio_BPI_M2P, pinTobcm_BPI_M2P 	},
   { "bpi-r2",      11101, 34, 1, 3, 5, 0, pinToGpio_BPI_R2,  physToGpio_BPI_R2,  pinTobcm_BPI_R2    },
   { NULL,		0, 0, 1, 2, 5, 0, NULL, NULL, NULL 	},
 } ;
 
-
+BoardHardwareDeviceTreeInfo gAllBoardHardwareDeviceTreeInfo[] = {
+	{"Banana Pi M2 Zero", BPI_MODEL_M2Z }, 
+};
 
 static uint8_t* gpio_mmap_reg = NULL;
 
@@ -289,17 +293,17 @@ int mtk_set_gpio_out(unsigned int pin, unsigned int output)
     uint32_t position = 0;
 
     position = gpio_mmap_reg + MTK_GPIO_DOUT + (pin / 16) * 16;
-    printf("pin=%d, output = %d, positon = %X\n", pin, output, position);
+    if (bpi_debug>=2) printf("pin=%d, output = %d, positon = %X\n", pin, output, position);
     tmp = *(volatile uint32_t*)(position);
-    printf("tmp = %X\n", tmp);
+    if (bpi_debug>=4) printf("tmp = %X\n", tmp);
     if(output == 1){
 	    tmp |= (1u << (pin % 16));
     }else{
 	    tmp &= ~(1u << (pin % 16));
     }
-    printf("tmp = %X\n", tmp);
+    if (bpi_debug>=4) printf("tmp = %X\n", tmp);
     *(volatile uint32_t*)(position) = tmp;
-    printf("finish mtk_set_gpio_out\n");
+    if (bpi_debug>=1) printf("finish mtk_set_gpio_out\n");
     return 1;
 
 }
@@ -314,15 +318,15 @@ int mtk_set_gpio_dir(unsigned int pin, unsigned int dir)
     }else{
         position = gpio_mmap_reg + (pin / 16) * 16 + 0x10;
     }
-    printf("pin=%d, dir=%d, positon = %X\n", pin, dir, position);
+    if (bpi_debug>=2) printf("pin=%d, dir=%d, positon = %X\n", pin, dir, position);
     tmp = *(volatile uint32_t*)(position);
-    printf("tmp = %X\n", tmp);
+    if (bpi_debug>=4) printf("tmp = %X\n", tmp);
     if(dir == 1){
         tmp |= (1u << (pin % 16));
     }else{
-	tmp &= ~(1u << (pin % 16));
+        tmp &= ~(1u << (pin % 16));
     }
-    printf("tmp = %X\n", tmp);
+    if (bpi_debug>=4) printf("tmp = %X\n", tmp);
     *(volatile uint32_t*)(position) = tmp;
     return 0;   
 
@@ -333,12 +337,12 @@ int mtk_set_gpio_mode(unsigned int pin, unsigned int mode){
     uint32_t position = 0;
     position = gpio_mmap_reg + MTK_GPIO_MODE + (pin / 5) * 16;
 
-    printf("pin=%d, mode=%d, positon = %X\n", pin, mode, position);
+    if (bpi_debug>=2) printf("pin=%d, mode=%d, positon = %X\n", pin, mode, position);
     tmp = *(volatile uint32_t*)(position);
 
-    printf("tmp = %X\n", tmp);
+    if (bpi_debug>=4) printf("tmp = %X\n", tmp);
     tmp &= ~(1u << ((pin % 5) * 3));
-    printf("tmp = %X\n", tmp);
+    if (bpi_debug>=4) printf("tmp = %X\n", tmp);
 
     *(volatile uint32_t*)(position) = tmp;
     return ;
@@ -362,7 +366,7 @@ int mtk_setup(void)
         close(gpio_mmap_fd);
         return -1;
     }
-    printf("gpio_mmap_fd=%d, gpio_map=%x", gpio_mmap_fd, gpio_mmap_reg);
+    if (bpi_debug>=1) printf("gpio_mmap_fd=%d, gpio_map=%x", gpio_mmap_fd, gpio_mmap_reg);
 
     return SETUP_OK;
 
@@ -371,7 +375,7 @@ int mtk_setup(void)
 
 uint32_t sunxi_readl(volatile uint32_t *addr)
 {
-    printf("sunxi_readl\n");
+    if (bpi_debug>=1) printf("sunxi_readl\n");
     uint32_t val = 0;
     uint32_t mmap_base = (uint32_t)addr & (~MAP_MASK);
     uint32_t mmap_seek = ((uint32_t)addr - mmap_base) >> 2;
@@ -381,7 +385,7 @@ uint32_t sunxi_readl(volatile uint32_t *addr)
 
 void sunxi_writel(volatile uint32_t *addr, uint32_t val)
 {
-    printf("sunxi_writel\n");
+    if (bpi_debug>=1) printf("sunxi_writel\n");
     uint32_t mmap_base = (uint32_t)addr & (~MAP_MASK);
     uint32_t mmap_seek =( (uint32_t)addr - mmap_base) >> 2;
     *(gpio_map + mmap_seek) = val;
@@ -399,7 +403,15 @@ int sunxi_setup(void)
     char buffer[1024];
     char hardware[1024];
     int found = 0;
-	printf("enter to sunxi_setup\n");
+
+    char* szDebug = getenv(ENV_DEBUG); 
+    if (szDebug) {
+      bpi_debug = atoi(szDebug);
+    } else {
+      bpi_debug = 0;
+    }
+    
+    if (bpi_debug>=1) printf("sunxi_setup\n");
 
     // mmap the GPIO memory registers
     if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0)
@@ -431,7 +443,8 @@ void sunxi_set_pullupdn(int gpio, int pud)
     int bank = GPIO_BANK(gpio); //gpio >> 5
     int index = GPIO_PUL_INDEX(gpio); // (gpio & 0x1f) >> 4
     int offset = GPIO_PUL_OFFSET(gpio); // (gpio) & 0x0F) << 1
-	printf("sunxi_set_pullupdn\n");
+    if (bpi_debug>=1) printf("sunxi_set_pullupdn %d %d\n", gpio, pud);
+    if (bpi_debug>=2) printf("gpio(%d) bank(%d) index(%d) offset(%d)\n", gpio, bank, index, offset);
 
     sunxi_gpio_t *pio = &((sunxi_gpio_reg_t *) pio_map)->gpio_bank[bank];
 /* DK, for PL and PM */
@@ -440,7 +453,7 @@ void sunxi_set_pullupdn(int gpio, int pud)
       pio = &((sunxi_gpio_reg_t *) r_pio_map)->gpio_bank[bank];
     }
 
-     switch(pud) {
+    switch(pud) {
       case PUD_DOWN: pud=0x2; break;
       case PUD_UP:   pud=0x1; break;
       default:       pud=0x0; break;
@@ -450,15 +463,17 @@ void sunxi_set_pullupdn(int gpio, int pud)
     regval &= ~(3 << offset);
     regval |= pud << offset;
     *(&pio->PULL[0] + index) = regval;
+    regval = *(&pio->PULL[0] + index);
 }
 
-void sunxi_setup_gpio(int gpio, int direction, int pud)
+void sunxi_setup_gpio(const int gpio, const int direction,const int pud)
 {
     uint32_t regval = 0;
     int bank = GPIO_BANK(gpio); //gpio >> 5
     int index = GPIO_CFG_INDEX(gpio); // (gpio & 0x1F) >> 3
     int offset = GPIO_CFG_OFFSET(gpio); // ((gpio & 0x1F) & 0x7) << 2
-    printf("sunxi_setup_gpio\n");
+    if (bpi_debug>=1) printf("sunxi_setup_gpio %d %d %d\n", gpio, direction, pud);
+    if (bpi_debug>=2) printf("gpio(%d) bank(%d) index(%d) offset(%d)\n", gpio, bank, index, offset);
     sunxi_gpio_t *pio = &((sunxi_gpio_reg_t *) pio_map)->gpio_bank[bank];
 /* DK, for PL and PM */
     if(bank >= 11) {
@@ -466,7 +481,7 @@ void sunxi_setup_gpio(int gpio, int direction, int pud)
       pio = &((sunxi_gpio_reg_t *) r_pio_map)->gpio_bank[bank];
     }
 
-    set_pullupdn(gpio, pud);
+    sunxi_set_pullupdn(gpio, pud);
 
     regval = *(&pio->CFG[0] + index);
     regval &= ~(0x7 << offset); // 0xf?
@@ -476,7 +491,8 @@ void sunxi_setup_gpio(int gpio, int direction, int pud)
         regval |=  (1 << offset);
         *(&pio->CFG[0] + index) = regval;
     } else {
-        printf("line:%dgpio number error\n",__LINE__);
+        fprintf(stderr, "gpio invalid direction");
+        if (bpi_debug>=1) printf("line:%d gpio number error\n",__LINE__);
     }
 }
 
@@ -487,7 +503,7 @@ int sunxi_gpio_function(int gpio)
     int bank = GPIO_BANK(gpio); //gpio >> 5
     int index = GPIO_CFG_INDEX(gpio); // (gpio & 0x1F) >> 3
     int offset = GPIO_CFG_OFFSET(gpio); // ((gpio & 0x1F) & 0x7) << 2
-     printf("sunxi_gpio_function\n");
+    if (bpi_debug>=1) printf("sunxi_gpio_function\n");
     sunxi_gpio_t *pio = &((sunxi_gpio_reg_t *) pio_map)->gpio_bank[bank];
 /* DK, for PL and PM */
     if(bank >= 11) {
@@ -506,7 +522,8 @@ void sunxi_output_gpio(int gpio, int value)
     int bank = GPIO_BANK(gpio); //gpio >> 5
     int num = GPIO_NUM(gpio); // gpio & 0x1F
 
- printf("gpio(%d) bank(%d) num(%d)\n", gpio, bank, num);
+    if (bpi_debug>=1) printf("sunxi_output_gpio\n");
+    if (bpi_debug>=2) printf("gpio(%d) bank(%d) num(%d)\n", gpio, bank, num);
     sunxi_gpio_t *pio = &((sunxi_gpio_reg_t *) pio_map)->gpio_bank[bank];
 /* DK, for PL and PM */
     if(bank >= 11) {
@@ -526,7 +543,8 @@ int sunxi_input_gpio(int gpio)
     int bank = GPIO_BANK(gpio); //gpio >> 5
     int num = GPIO_NUM(gpio); // gpio & 0x1F
 
- printf("gpio(%d) bank(%d) num(%d)\n", gpio, bank, num);
+    if (bpi_debug>=1) printf("sunxi_input_gpio\n");
+    if (bpi_debug>=2) printf("gpio(%d) bank(%d) num(%d)\n", gpio, bank, num);
     sunxi_gpio_t *pio = &((sunxi_gpio_reg_t *) pio_map)->gpio_bank[bank];
 /* DK, for PL and PM */
     if(bank >= 11) {
@@ -540,6 +558,30 @@ int sunxi_input_gpio(int gpio)
     return regval;
 }
 
+
+
+int getBoardModelbyDeviceTreeModel()
+{
+	FILE *f;
+	size_t i;
+	int ret = -1;
+	char line[1024];
+
+	if (!(f = fopen("/proc/device-tree/model", "r"))) {
+		return -1;
+	}
+	if (fgets(line, sizeof(line), f)) {
+		for (i=0; i<(sizeof(gAllBoardHardwareDeviceTreeInfo)/sizeof(BoardHardwareDeviceTreeInfo)); i++) {
+			if (!strcmp(gAllBoardHardwareDeviceTreeInfo[i].deviceTreeModel, line)) {
+				ret = gAllBoardHardwareDeviceTreeInfo[i].boardModel;
+				break;
+			}
+		}
+	}
+	fclose(f);
+	return ret;
+}
+
 int bpi_piGpioLayout (void)
 {
   FILE *bpiFd ;
@@ -550,6 +592,18 @@ int bpi_piGpioLayout (void)
 
   if (gpioLayout != -1)	// No point checking twice
     return gpioLayout ;
+
+  // Check board via device-tree model
+  int boardModel = getBoardModelbyDeviceTreeModel();
+  if (boardModel>=0) {
+    gpioLayout = boardModel;
+    if (gpioLayout >= BPI_MODEL_MIN) {
+      if (bpi_debug>=2) printf ("Banana Pi devicetree found layout %d\n", gpioLayout) ;
+      bpi_found = 1;
+      return gpioLayout;     
+    }
+  }
+
 
   bpi_found = 0; // -1: not init, 0: init but not found, 1: found
   if ((bpiFd = fopen("/var/lib/bananapi/board.sh", "r")) == NULL) {
@@ -566,7 +620,8 @@ int bpi_piGpioLayout (void)
         //gpioLayout = board->gpioLayout;
         gpioLayout = board->model; // BPI: use model to replace gpioLayout
         //printf("BPI: name[%s] gpioLayout(%d)\n",board->name, gpioLayout);
-        if(gpioLayout >= 21) {
+        if(gpioLayout >= BPI_MODEL_MIN) {
+          if (bpi_debug>=2) printf ("Banana Pi '/var/lib/bananapi/board.sh' found layout %d\n", gpioLayout) ;
           bpi_found = 1;
           break;
         }
@@ -591,17 +646,17 @@ int bpi_get_rpi_info(rpi_info *info)
   char type[64];
 
   gpioLayout = bpi_piGpioLayout () ;
-  printf("BPI: gpioLayout(%d)\n", gpioLayout);
+  if (bpi_debug>=1) printf("BPI: gpioLayout(%d)\n", gpioLayout);
   if(bpi_found == 1) {
     board = &bpiboard[gpioLayout];
-    printf("BPI: name[%s] gpioLayout(%d)\n",board->name, gpioLayout);
+    if (bpi_debug>=1) printf("BPI: name[%s] gpioLayout(%d)\n",board->name, gpioLayout);
     sprintf(ram, "%dMB", piMemorySize [board->mem]);
     sprintf(type, "%s", piModelNames [board->model]);
      //add by jackzeng
      //jude mtk platform
     if(strcmp(board->name, "bpi-r2") == 0){
         bpi_found_mtk = 1;
-	printf("found mtk board\n");
+        printf("found mtk board\n");
     }
     sprintf(manufacturer, "%s", piMakerNames [board->maker]);
     info->p1_revision = 3;
@@ -611,7 +666,7 @@ int bpi_get_rpi_info(rpi_info *info)
     if(bpi_found_mtk == 1){
         info->processor = "MTK";
     }else{
-	info->processor = "Allwinner";
+      info->processor = "Allwinner";
     }
     
     strcpy(info->revision, "4001");
@@ -619,7 +674,7 @@ int bpi_get_rpi_info(rpi_info *info)
     pinToGpio_BP =  board->pinToGpio ;
     physToGpio_BP = board->physToGpio ;
     pinTobcm_BP = board->pinTobcm ;
-    //printf("BPI: name[%s] bType(%d) model(%d)\n",board->name, bType, board->model);
+    if (bpi_debug>=4) printf("BPI: name[%s] model(%d)\n",board->name, board->model);
     return 0;
   }
   return -1;

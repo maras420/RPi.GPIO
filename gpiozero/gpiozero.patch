@@ -1,0 +1,10 @@
+--- /usr/lib/python3/dist-packages/gpiozero/pins/data.py.bkup	2020-05-13 16:23:33.250522943 +0200
++++ /usr/lib/python3/dist-packages/gpiozero/pins/data.py	2020-05-13 17:09:17.271689246 +0200
+@@ -447,6 +447,7 @@
+ 
+ PI_REVISIONS = {
+     # rev     model    pcb_rev released soc        manufacturer ram   storage    usb eth wifi   bt     csi dsi headers                         board
++    0x0:      ('M2Z','1.0','2018','Allwinner H2+', 'Sinovoip',  512,  'MicroSD', 1,  1,  True,  True,  0,  0,  {'J8': PLUS_J8},                ZERO13_BOARD,  ),
+     0x2:      ('B',    '1.0', '2012Q1', 'BCM2835', 'Egoman',    256,  'SD',      2,  1,  False, False, 1,  1,  {'P1': REV1_P1},                REV1_BOARD,   ),
+     0x3:      ('B',    '1.0', '2012Q3', 'BCM2835', 'Egoman',    256,  'SD',      2,  1,  False, False, 1,  1,  {'P1': REV1_P1},                REV1_BOARD,   ),
+     0x4:      ('B',    '2.0', '2012Q3', 'BCM2835', 'Sony',      256,  'SD',      2,  1,  False, False, 1,  1,  {'P1': REV2_P1, 'P5': REV2_P5}, REV2_BOARD,   ),

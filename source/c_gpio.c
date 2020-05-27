@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2012-2015 Ben Croston
+Copyright (c) 2012-2019 Ben Croston
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -43,20 +43,21 @@ SOFTWARE.
 #define PULLUPDN_OFFSET             37  // 0x0094 / 4
 #define PULLUPDNCLK_OFFSET          38  // 0x0098 / 4
 
+#define PULLUPDN_OFFSET_2711_0      57
+#define PULLUPDN_OFFSET_2711_1      58
+#define PULLUPDN_OFFSET_2711_2      59
+#define PULLUPDN_OFFSET_2711_3      60
+
 #define PAGE_SIZE  (4*1024)
 #define BLOCK_SIZE (4*1024)
 
 static volatile uint32_t *gpio_map;
 
-#ifndef BPI
-#define BPI
-#endif
-
-#ifdef BPI
 extern int bpi_found;
 extern int bpi_found_mtk;
 extern int *pinTobcm_BP ;
-#endif
+extern int bpi_debug;
+
 
 void short_wait(void)
 {
@@ -71,7 +72,7 @@ int setup(void)
 {
     int mem_fd;
     uint8_t *gpio_mem;
-    uint32_t peri_base;
+    uint32_t peri_base = 0;
     uint32_t gpio_base;
     unsigned char buf[4];
     FILE *fp;
@@ -79,19 +80,16 @@ int setup(void)
     char hardware[1024];
     int found = 0;
 
-#ifdef BPI
     if( bpi_found == 1 ) {
-	if( bpi_found_mtk == 1){
+       if( bpi_found_mtk == 1){
             return mtk_setup();
-	}
-	return sunxi_setup();
+       }
+       return sunxi_setup();
     }
-#endif
     // try /dev/gpiomem first - this does not require root privs
     if ((mem_fd = open("/dev/gpiomem", O_RDWR|O_SYNC)) > 0)
     {
-        gpio_map = (uint32_t *)mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, mem_fd, 0);
-        if ((uint32_t)gpio_map < 0) {
+        if ((gpio_map = (uint32_t *)mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, mem_fd, 0)) == MAP_FAILED) {
             return SETUP_MMAP_FAIL;
         } else {
             return SETUP_OK;
@@ -113,8 +111,7 @@ int setup(void)
         if ((fp = fopen("/proc/cpuinfo", "r")) == NULL)
             return SETUP_CPUINFO_FAIL;
 
-        while(!feof(fp) && !found) {
-            fgets(buffer, sizeof(buffer), fp);
+        while(!feof(fp) && !found && fgets(buffer, sizeof(buffer), fp)) {
             sscanf(buffer, "Hardware	: %s", hardware);
             if (strcmp(hardware, "BCM2708") == 0 || strcmp(hardware, "BCM2835") == 0) {
                 // pi 1 hardware
@@ -131,6 +128,8 @@ int setup(void)
             return SETUP_NOT_RPI_FAIL;
     }
 
+    if (!peri_base)
+        return SETUP_NOT_RPI_FAIL;
     gpio_base = peri_base + GPIO_BASE_OFFSET;
 
     // mmap the GPIO memory registers
@@ -143,9 +142,7 @@ int setup(void)
     if ((uint32_t)gpio_mem % PAGE_SIZE)
         gpio_mem += PAGE_SIZE - ((uint32_t)gpio_mem % PAGE_SIZE);
 
-    gpio_map = (uint32_t *)mmap( (void *)gpio_mem, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_FIXED, mem_fd, gpio_base);
-
-    if ((uint32_t)gpio_map < 0)
+    if ((gpio_map = (uint32_t *)mmap( (void *)gpio_mem, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_FIXED, mem_fd, gpio_base)) == MAP_FAILED)
         return SETUP_MMAP_FAIL;
 
     return SETUP_OK;
@@ -156,11 +153,9 @@ void clear_event_detect(int gpio)
     int offset = EVENT_DETECT_OFFSET + (gpio/32);
     int shift = (gpio%32);
 
-#ifdef BPI
     if( bpi_found == 1 ) {
         return;
 	} 
-#endif
     *(gpio_map+offset) |= (1 << shift);
     short_wait();
     *(gpio_map+offset) = 0;
@@ -170,11 +165,9 @@ int eventdetected(int gpio)
 {
     int offset, value, bit;
 
-#ifdef BPI
     if( bpi_found == 1 ) {
         return;
 	} 
-#endif
     offset = EVENT_DETECT_OFFSET + (gpio/32);
     bit = (1 << (gpio%32));
     value = *(gpio_map+offset) & bit;
@@ -188,11 +181,9 @@ void set_rising_event(int gpio, int enable)
     int offset = RISING_ED_OFFSET + (gpio/32);
     int shift = (gpio%32);
 
-#ifdef BPI
     if( bpi_found == 1 ) {
         return;
 	} 
-#endif
     if (enable)
         *(gpio_map+offset) |= 1 << shift;
     else
@@ -205,11 +196,9 @@ void set_falling_event(int gpio, int enable)
     int offset = FALLING_ED_OFFSET + (gpio/32);
     int shift = (gpio%32);
 
-#ifdef BPI
     if( bpi_found == 1 ) {
         return;
 	} 
-#endif
     if (enable) {
         *(gpio_map+offset) |= (1 << shift);
         *(gpio_map+offset) = (1 << shift);
@@ -224,11 +213,9 @@ void set_high_event(int gpio, int enable)
     int offset = HIGH_DETECT_OFFSET + (gpio/32);
     int shift = (gpio%32);
 
-#ifdef BPI
     if( bpi_found == 1 ) {
         return;
 	}
-#endif
     if (enable)
         *(gpio_map+offset) |= (1 << shift);
     else
@@ -241,11 +228,9 @@ void set_low_event(int gpio, int enable)
     int offset = LOW_DETECT_OFFSET + (gpio/32);
     int shift = (gpio%32);
 
-#ifdef BPI
     if( bpi_found == 1 ) {
         return;
 	} 
-#endif
     if (enable)
         *(gpio_map+offset) |= 1 << shift;
     else
@@ -258,41 +243,59 @@ void set_pullupdn(int gpio, int pud)
     int clk_offset = PULLUPDNCLK_OFFSET + (gpio/32);
     int shift = (gpio%32);
 
-#ifdef BPI
     if( bpi_found == 1 ) {
         gpio = *(pinTobcm_BP + gpio);
         return sunxi_set_pullupdn(gpio, pud);
     }
-#endif
-    if (pud == PUD_DOWN)
-        *(gpio_map+PULLUPDN_OFFSET) = (*(gpio_map+PULLUPDN_OFFSET) & ~3) | PUD_DOWN;
-    else if (pud == PUD_UP)
-        *(gpio_map+PULLUPDN_OFFSET) = (*(gpio_map+PULLUPDN_OFFSET) & ~3) | PUD_UP;
-    else  // pud == PUD_OFF
-        *(gpio_map+PULLUPDN_OFFSET) &= ~3;
+    // Check GPIO register
+    int is2711 = *(gpio_map+PULLUPDN_OFFSET_2711_3) != 0x6770696f;
+    if (is2711) {
+        // Pi 4 Pull-up/down method
+        int pullreg = PULLUPDN_OFFSET_2711_0 + (gpio >> 4);
+        int pullshift = (gpio & 0xf) << 1;
+        unsigned int pullbits;
+        unsigned int pull = 0;
+        switch (pud) {
+            case PUD_OFF:  pull = 0; break;
+            case PUD_UP:   pull = 1; break;
+            case PUD_DOWN: pull = 2; break;
+            default:       pull = 0; // switch PUD to OFF for other values
+        }
+        pullbits = *(gpio_map + pullreg);
+        pullbits &= ~(3 << pullshift);
+        pullbits |= (pull << pullshift);
+        *(gpio_map + pullreg) = pullbits;
+    } else {
+        // Legacy Pull-up/down method
+        int clk_offset = PULLUPDNCLK_OFFSET + (gpio/32);
+        int shift = (gpio%32);
 
-    short_wait();
-    *(gpio_map+clk_offset) = 1 << shift;
-    short_wait();
-    *(gpio_map+PULLUPDN_OFFSET) &= ~3;
-    *(gpio_map+clk_offset) = 0;
+        if (pud == PUD_DOWN) {
+            *(gpio_map+PULLUPDN_OFFSET) = (*(gpio_map+PULLUPDN_OFFSET) & ~3) | PUD_DOWN;
+        } else if (pud == PUD_UP) {
+            *(gpio_map+PULLUPDN_OFFSET) = (*(gpio_map+PULLUPDN_OFFSET) & ~3) | PUD_UP;
+        } else  { // pud == PUD_OFF
+            *(gpio_map+PULLUPDN_OFFSET) &= ~3;
+        }
+        short_wait();
+        *(gpio_map+clk_offset) = 1 << shift;
+        short_wait();
+        *(gpio_map+PULLUPDN_OFFSET) &= ~3;
+        *(gpio_map+clk_offset) = 0;
+    }
 }
 
 void setup_gpio(int gpio, int direction, int pud)
 {
 
-#ifdef BPI
     if( bpi_found == 1 ) {
         gpio = *(pinTobcm_BP + gpio);
-	if(bpi_found_mtk == 1){
-		return;
-	}else{
-		return sunxi_setup_gpio(gpio, direction, pud);
-	}
-        
+	    if(bpi_found_mtk == 1){
+		    return;
+	    }else{
+		    return sunxi_setup_gpio(gpio, direction, pud);
+	    }
     }
-    else {
-#endif
     int offset = FSEL_OFFSET + (gpio/10);
     int shift = (gpio%10)*3;
 
@@ -301,26 +304,19 @@ void setup_gpio(int gpio, int direction, int pud)
         *(gpio_map+offset) = (*(gpio_map+offset) & ~(7<<shift)) | (1<<shift);
     else  // direction == INPUT
         *(gpio_map+offset) = (*(gpio_map+offset) & ~(7<<shift));
-#ifdef BPI
-    }
-#endif
 }
 
 // Contribution by Eric Ptak <trouch@trouch.com>
 int gpio_function(int gpio)
 {
-#ifdef BPI
     if( bpi_found == 1 ) {
        gpio = *(pinTobcm_BP + gpio);
-	if(bpi_found_mtk == 1){
-		return;
-	}else{
-		return sunxi_gpio_function(gpio);
-	}
-       
+	    if(bpi_found_mtk == 1){
+		    return;
+	    }else{
+		    return sunxi_gpio_function(gpio);
+	    }
     }
-    else {
-#endif
     int offset = FSEL_OFFSET + (gpio/10);
     int shift = (gpio%10)*3;
     int value = *(gpio_map+offset);
@@ -328,28 +324,23 @@ int gpio_function(int gpio)
     value >>= shift;
     value &= 7;
     return value; // 0=input, 1=output, 4=alt0
-#ifdef BPI	
-    }
-#endif
 }
 
 void output_gpio(int gpio, int value)
 {
     int offset, shift;
 
-#ifdef BPI
     if ( bpi_found == 1)  {
-	printf("gpio = %d, value = %d\n", gpio, value);
-	gpio = *(pinTobcm_BP + gpio);
-	printf("gpio = %d, value = %d\n", gpio, value);
-	if(bpi_found_mtk ==  1){
-		mtk_set_gpio_out(gpio, value);
-	}else{
+	    if (bpi_debug>=2) printf("gpio-call = %d\n", gpio);
+	    gpio = *(pinTobcm_BP + gpio);
+	    if (bpi_debug>=2) printf("gpio = %d, value = %d\n", gpio, value);
+	    if(bpi_found_mtk ==  1){
+		    mtk_set_gpio_out(gpio, value);
+	    }else{
 	       sunxi_output_gpio(gpio, value);
-	}
+	    }
        return;
     }
-#endif	
     if (value) // value == HIGH
         offset = SET_OFFSET + (gpio/32);
     else       // value == LOW
@@ -365,12 +356,10 @@ int input_gpio(int gpio)
    int offset, value, mask;
 
 
-#ifdef BPI
    if ( bpi_found == 1)  {
       gpio = *(pinTobcm_BP + gpio);
       return sunxi_input_gpio(gpio);
    }
-#endif	
    offset = PINLEVEL_OFFSET + (gpio/32);
    mask = (1 << gpio%32);
    value = *(gpio_map+offset) & mask;
