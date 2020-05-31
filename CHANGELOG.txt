@@ -1,6 +1,10 @@
 Change Log
 ==========
 
+0.17.0
+-------
+- Raspberry Pi and Banana Pi combined version by GC2
+
 0.7.0
 -------
 - Updated RPI_INFO to include RPi 4B
