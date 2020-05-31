@@ -2,6 +2,13 @@
 
 RPi.GPIO (A Python module to control the GPIO on a Raspberry Pi) for Banana Pi 
 
+## Build
+
+```
+apt-get install python3-all python3-all-dev
+./make_deb
+```
+
 ## Modifcations by GC2
 
 This is a combination of original [SourceForge v0.7.0](https://sourceforge.net/p/raspberry-gpio-python/code/ci/default/tree/) and [BPI-SINOVOIP/RPi.GPIO](https://github.com/BPI-SINOVOIP/RPi.GPIO) with a couple of bug fixes.
