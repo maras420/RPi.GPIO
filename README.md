@@ -9,6 +9,10 @@ apt-get install python3-all python3-all-dev
 ./make_deb
 ```
 
+## Debug
+
+Set env RPIGPIO_DEBUG to debug-level (1-4) to see debug messages, see [pull18_bcm.py](https://github.com/GrazerComputerClub/RPi.GPIO/blob/master/test/pull18_bcm.py) 
+
 ## Modifcations by GC2
 
 This is a combination of original [SourceForge v0.7.0](https://sourceforge.net/p/raspberry-gpio-python/code/ci/default/tree/) and [BPI-SINOVOIP/RPi.GPIO](https://github.com/BPI-SINOVOIP/RPi.GPIO) with a couple of bug fixes.
