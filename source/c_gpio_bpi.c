@@ -655,8 +655,14 @@ int bpi_get_rpi_info(rpi_info *info)
     }else{
       info->processor = "Allwinner";
     }
-    
-    strcpy(info->revision, "4001");
+    switch(gpioLayout) {
+      case BPI_MODEL_M2Z:
+    	strcpy(info->revision, "9000c1"); //Revision Raspberry Pi Zero W
+        break;
+      default:
+    	strcpy(info->revision, "4001");
+        break;
+    }
 //    pin_to_gpio =  board->physToGpio ;
     pinToGpio_BP =  board->pinToGpio ;
     physToGpio_BP = board->physToGpio ;
