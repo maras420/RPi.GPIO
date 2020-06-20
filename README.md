@@ -5,7 +5,7 @@ RPi.GPIO (A Python module to control the GPIO on a Raspberry Pi) for Banana Pi
 ## Build
 
 ```
-apt-get install python3-all python3-all-dev
+apt-get install python3-all python3-all-dev debhelper
 ./make_deb
 ```
 
@@ -30,6 +30,7 @@ Please contact base repository maintainers if you have problems.
 * `eventdetected`
 * `set_rising_event`
 * `set_falling_event`
+* `set_high_event`
 * `set_low_event`
 
 
