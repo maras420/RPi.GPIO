@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-0.17.0
+0.7.200620
 -------
 - Raspberry Pi and Banana Pi combined version by GC2
 

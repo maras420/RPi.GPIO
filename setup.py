@@ -33,9 +33,9 @@ classifiers = ['Development Status :: 5 - Production/Stable',
                'Topic :: System :: Hardware']
 
 setup(name             = 'RPi.GPIO',
-      version          = '0.17.0',
+      version          = '0.7.200620',
       author           = 'Ben Croston, BPi and GC2',
-      author_email     = 'ben@croston.org;raspjammingos@gc2.at',
+      author_email     = 'ben@croston.org;RPi.GPIO@gc2.at',
       description      = 'A module to control Raspberry Pi and Banana Pi GPIO channels',
       long_description = open('README.txt').read() + open('CHANGELOG.txt').read(),
       license          = 'MIT',
