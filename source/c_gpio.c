@@ -166,7 +166,7 @@ int eventdetected(int gpio)
     int offset, value, bit;
 
     if( bpi_found == 1 ) {
-        return;
+        return 0;
 	} 
     offset = EVENT_DETECT_OFFSET + (gpio/32);
     bit = (1 << (gpio%32));
@@ -245,7 +245,8 @@ void set_pullupdn(int gpio, int pud)
 
     if( bpi_found == 1 ) {
         gpio = *(pinTobcm_BP + gpio);
-        return sunxi_set_pullupdn(gpio, pud);
+        sunxi_set_pullupdn(gpio, pud);
+	return;
     }
     // Check GPIO register
     int is2711 = *(gpio_map+PULLUPDN_OFFSET_2711_3) != 0x6770696f;
@@ -312,7 +313,7 @@ int gpio_function(int gpio)
     if( bpi_found == 1 ) {
        gpio = *(pinTobcm_BP + gpio);
 	    if(bpi_found_mtk == 1){
-		    return;
+		    return 0;
 	    }else{
 		    return sunxi_gpio_function(gpio);
 	    }
