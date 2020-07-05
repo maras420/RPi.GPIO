@@ -27,6 +27,7 @@ SOFTWARE.
 #include <sys/mman.h>
 #include <string.h>
 #include "c_gpio.h"
+#include "event_gpio.h"
 
 #define BCM2708_PERI_BASE_DEFAULT   0x20000000
 #define BCM2709_PERI_BASE_DEFAULT   0x3f000000
@@ -356,8 +357,17 @@ int input_gpio(int gpio)
 {
    int offset, value, mask;
 
-
    if ( bpi_found == 1)  {
+      char c = 0;
+      struct gpios* gpioEdge = get_gpio(gpio);
+      if (gpioEdge && gpioEdge->value_fd>0) {
+        if (bpi_debug>=4) printf("edge detection active\n", gpio, c);
+        lseek(gpioEdge->value_fd, 0L, SEEK_SET) ;
+        if (read(gpioEdge->value_fd, &c, 1)) {
+          if (bpi_debug>=2) printf("input_gpio from sysfs gpio = %d, value = %c\n", gpio, c);
+          return (c == '0') ? 0 : 1 ;
+        }
+      }
       gpio = *(pinTobcm_BP + gpio);
       return sunxi_input_gpio(gpio);
    }

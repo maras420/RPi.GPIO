@@ -112,7 +112,6 @@ int bpi_found=-1;
 int bpi_found_mtk = 0;
 int bpi_debug = 0;
 
-
 #define BPI_MODEL_MIN   21
 #define	BPI_MODEL_M2Z 	33
 
