@@ -24,13 +24,4 @@ We provide no support!
 
 Please contact base repository maintainers if you have problems.
 
-## Functions missing
-
-* `clear_event_detect`
-* `eventdetected`
-* `set_rising_event`
-* `set_falling_event`
-* `set_high_event`
-* `set_low_event`
-
 
