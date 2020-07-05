@@ -444,9 +444,18 @@ void sunxi_set_pullupdn(int gpio, int pud)
     }
 
     switch(pud) {
-      case PUD_DOWN: pud=0x2; break;
-      case PUD_UP:   pud=0x1; break;
-      default:       pud=0x0; break;
+      case PUD_DOWN:
+        pud=0x2;
+        if (bpi_debug>=2) printf("pulldown\n");
+        break;
+      case PUD_UP:
+        pud=0x1;
+        if (bpi_debug>=2) printf("pullup\n");
+        break;
+      default:
+        if (bpi_debug>=2) printf("off\n");
+        pud=0x0;
+        break;
     }
 
     regval = *(&pio->PULL[0] + index);
@@ -543,8 +552,10 @@ int sunxi_input_gpio(int gpio)
     }
 
     regval = *(&pio->DAT);
+    if (bpi_debug>=4) printf("dat value=%u, cfg0=%u, cfg1=%u, cfg2=%u, cfg3=%u \n", regval,*(&pio->CFG[0]),*(&pio->CFG[1]),*(&pio->CFG[2]),*(&pio->CFG[3]));
     regval = regval >> num;
     regval &= 1;
+    if (bpi_debug>=2) printf("value=%u\n", regval);
     return regval;
 }
 
