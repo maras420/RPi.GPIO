@@ -105,6 +105,10 @@ int gpio_unexport(unsigned int gpio)
     int fd, len;
     char str_gpio[4];
 
+    if (1==bpi_found) {
+      gpio = *(pinTobcm_BP + gpio);
+      if (bpi_debug>=4) printf("translated gpio=%u\n", gpio);
+    }   
     if ((fd = open("/sys/class/gpio/unexport", O_WRONLY)) < 0) {
         if (bpi_debug>=1) printf("open gpio unexport file failed\n");
         return -1;
