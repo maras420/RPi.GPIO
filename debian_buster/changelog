@@ -1,6 +1,6 @@
-rpi.gpio (0.7.200620~buster-1) unstable; urgency=low
+rpi.gpio (0.7.200708~buster-1) unstable; urgency=low
 
-  * To match Python RPi.GPIO package 0.7.200620
+  * To match Python RPi.GPIO package 0.7.0.7.200708
 
- -- Ben Croston <ben@croston.org>  Sun, 31 May 2020 15:26:16 +0100
+ -- GC2 <RPi.GPIO@gc2.at>  Sun, 08 Jul 2020 09:40:16 +0100
  
