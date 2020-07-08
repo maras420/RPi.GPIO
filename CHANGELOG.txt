@@ -1,6 +1,10 @@
 Change Log
 ==========
 
+0.7.200708
+-------
+- Banana Pi: Edge/Event support
+
 0.7.200620
 -------
 - Raspberry Pi and Banana Pi combined version by GC2
